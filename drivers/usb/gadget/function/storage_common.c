@@ -439,7 +439,7 @@ ssize_t fsg_store_file(struct fsg_lun *curlun, struct rw_semaphore *filesem,
 		       const char *buf, size_t count)
 {
 	int		rc = 0;
-	static int	incdrom = 0;
+//	static int	incdrom = 0;
 
 	if (curlun->prevent_medium_removal && fsg_lun_is_open(curlun)) {
 		LDBG(curlun, "eject attempt prevented\n");
@@ -459,7 +459,7 @@ ssize_t fsg_store_file(struct fsg_lun *curlun, struct rw_semaphore *filesem,
 			curlun->unit_attention_data =
 					SS_NOT_READY_TO_READY_TRANSITION;
 
-		pr_info("fsg_store_file: count=%zu, buf=%pK, curlun=%pK\n", count, buf, curlun);
+/*		pr_info("fsg_store_file: count=%zu, buf=%pK, curlun=%pK\n", count, buf, curlun);
 		if (count > 3 && 0 == memcmp(&buf[count-4], ".iso", 4)) {
 			pr_info("buf=%s, buf[count-4]=%s\n", buf, &buf[count-4]);
 			curlun->cdrom = 1;
@@ -483,9 +483,9 @@ ssize_t fsg_store_file(struct fsg_lun *curlun, struct rw_semaphore *filesem,
 			curlun->removable = 1;
 			curlun->nofua = 1;
 			incdrom = 0;
-		}
+		} */
 	} else if (fsg_lun_is_open(curlun)) {
-		int needclose = 1;
+/*		int needclose = 1;
 
 		if (incdrom) {
 			if (count == 4 && buf && 0 == memcmp(buf, "none", 4))
@@ -493,10 +493,10 @@ ssize_t fsg_store_file(struct fsg_lun *curlun, struct rw_semaphore *filesem,
 			else
 				needclose = 0;
 		}
-		if (needclose) {
+		if (needclose) { */
 			fsg_lun_close(curlun);
 			curlun->unit_attention_data = SS_MEDIUM_NOT_PRESENT;
-		}
+//		}
 	}
 	up_write(filesem);
 	return (rc < 0 ? rc : count);
