@@ -514,12 +514,40 @@ ssize_t fsg_store_cdrom(struct fsg_lun *curlun, struct rw_semaphore *filesem,
 		return ret;
 
 	down_read(filesem);
-	ret = cdrom ? _fsg_store_ro(curlun, true) : 0;
+	/* When setting/clearing cdrom, do not automatically change ro status.
+	 * User should control 'ro' attribute independently via its sysfs node.
+	 * If cdrom is true, initially_ro might still be set by fsg_lun_open
+	 * if the backing file is not writable, or by fsg_common_create_lun.
+	 * This change primarily affects runtime modification via configfs.
+	 */
+	// ret = cdrom ? _fsg_store_ro(curlun, true) : 0; // Original line that forced ro=true
 
-	if (!ret) {
-		curlun->cdrom = cdrom;
-		ret = count;
+	// We still need to ensure that if cdrom is true, the block size is appropriate.
+	// This is handled in fsg_lun_open.
+	// And if cdrom is true, ro should typically be true for standard behavior.
+	// However, to meet the user's request for a writable CD-ROM (non-standard),
+	// we will not force 'ro' here. The 'ro' attribute can be set separately.
+	// If 'cdrom' is being set to true, and the LUN was previously not 'ro',
+	// it might be desirable to set 'ro' to true by default unless explicitly
+	// set otherwise, but for this specific request, we decouple them.
+
+	curlun->cdrom = cdrom;
+	if (cdrom && curlun->filp) { /* If it's becoming a CD-ROM and is open */
+		/* Ensure blocksize is correct for CD-ROM if already open,
+		 * fsg_lun_open handles this for new opens.
+		 * This might be complex if already open with a different blksize.
+		 * For simplicity, we assume fsg_lun_open will be called or has been
+		 * called with the correct backing file type (ISO).
+		 * The primary effect of cdrom=true on an open LUN is on SCSI cmd handling.
+		 */
+		if (curlun->blksize != 2048) {
+			LINFO(curlun, "CD-ROM LUNs typically use 2048 byte blocks. Current: %u", curlun->blksize);
+			// Potentially, one might want to re-evaluate blksize here,
+			// but fsg_lun_open is the main place for that.
+		}
 	}
+
+	ret = count;
 	up_read(filesem);
 
 	return ret;

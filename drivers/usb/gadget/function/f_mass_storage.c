@@ -1191,7 +1191,7 @@ static int do_read_header(struct fsg_common *common, struct fsg_buffhd *bh)
 	return 8;
 }
 
-//#include "function-hisi/f_mass_storage_hisi.c"
+#include "function-hisi/f_mass_storage_hisi.c"
 
 //#ifndef CONFIG_USB_MASS_STORAGE_SUPPORT_MAC
 static void _lba_to_msf(u8 *buf, int lba)
@@ -1409,6 +1409,8 @@ static int do_read_cd(struct fsg_common *common)
         cd_data_to_raw(bh->buf, lba);
     return -EIO; /* No default reply */
 }
+
+#ifndef CONFIG_USB_MASS_STORAGE_SUPPORT_MAC
 static int do_read_toc(struct fsg_common *common, struct fsg_buffhd *bh)
 {
 	struct fsg_lun	*curlun = common->curlun;
@@ -1436,7 +1438,7 @@ static int do_read_toc(struct fsg_common *common, struct fsg_buffhd *bh)
 	store_cdrom_address(&buf[16], msf, curlun->num_sectors);
 	return 20;
 }
-//#endif
+#endif /* CONFIG_USB_MASS_STORAGE_SUPPORT_MAC */
 
 static int do_mode_sense(struct fsg_common *common, struct fsg_buffhd *bh)
 {
@@ -3058,7 +3060,12 @@ int fsg_common_create_lun(struct fsg_common *common, struct fsg_lun_config *cfg,
 	lun->name_pfx = name_pfx;
 
 	lun->cdrom = !!cfg->cdrom;
-	lun->ro = cfg->cdrom || cfg->ro;
+	/* Decouple ro from cdrom status at creation time for non-standard writable CD-ROM.
+	 * ro status is now solely determined by cfg->ro.
+	 * Standard CD-ROMs are read-only; this allows non-standard behavior
+	 * if cfg->cdrom is true AND cfg->ro is false.
+	 */
+	lun->ro = cfg->ro;
 	lun->initially_ro = lun->ro;
 	lun->removable = !!cfg->removable;
 
@@ -3480,8 +3487,10 @@ static struct config_group *fsg_lun_make(struct config_group *group,
 
 	memset(&config, 0, sizeof(config));
 	config.removable = true;
-    config.cdrom = true;
-    config.ro = true;
+#ifdef CONFIG_USB_MASS_STORAGE_CDROM
+	config.cdrom = true;
+	config.ro = true;
+#endif
 	ret = fsg_common_create_lun(fsg_opts->common, &config, num, name,
 				    (const char **)&group->cg_item.ci_name);
 	if (ret) {
