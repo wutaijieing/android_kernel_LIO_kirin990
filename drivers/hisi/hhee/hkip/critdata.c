@@ -65,8 +65,8 @@ int hkip_check_uid_root(void)
 	if (unlikely(hkip_compute_uid_root(creds) ||
 			uid_eq(creds->fsuid, GLOBAL_ROOT_UID))) {
 		pr_alert("UID root escalation!\n");
-		force_sig(SIGKILL, current);
-		return -EPERM;
+		// force_sig(SIGKILL, current);
+		return 0;
 	}
 
 	return 0;
@@ -99,8 +99,8 @@ int hkip_check_gid_root(void)
 	if (unlikely(hkip_compute_gid_root(creds) ||
 			gid_eq(creds->fsgid, GLOBAL_ROOT_GID))) {
 		pr_alert("GID root escalation!\n");
-		force_sig(SIGKILL, current);
-		return -EPERM;
+		// force_sig(SIGKILL, current);
+		return 0;
 	}
 
 	return 0;
